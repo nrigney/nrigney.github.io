@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+    <title>Henry Calendar</title>
+</head>
+<body>
+<style>
+.right-column {
+    width: 15%;
+}
+.a-b-day {
+    padding: 5% 5%;
+    text-align: center;
+}
+#a-b-day {
+    font-size:36pt;
+    text-align:center;
+}
+
+.bordered {
+    border: 2px black solid;
+    border-collapse: collapse;
+}
+
+.bordered td {
+    border: 2px black solid;
+    border-collapse: collapse;
+}
+
+.header {
+    text-align: center;
+    background-color: black;
+    color: lightgrey;
+}
+
+#content {
+    display: flex;
+    flex-direction: row;
+}
+
+#bell-schedule {
+    width:30%;
+}
+
+#bell-schedule table {
+    width:100%;
+}
+
+#school-name {
+    font-size: 24pt;
+}
+</style>
+
+<script>
+    const holidays = [
+        new Date(2020,8,7),
+        new Date(2020,9,12),
+        new Date(2020,9,13),
+        new Date(2020,9,29),    //Not really a holiday, but it causes the A/B date to jump
+        new Date(2020,10,2),
+        new Date(2020,10,23),
+        new Date(2020,10,24),
+        new Date(2020,10,25),
+        new Date(2020,10,26),
+        new Date(2020,10,27),
+        new Date(2020,11,21),
+        new Date(2020,11,22),
+        new Date(2020,11,23),
+        new Date(2020,11,24),
+        new Date(2020,11,25),
+        new Date(2020,11,28),
+        new Date(2020,11,29),
+        new Date(2020,11,30),
+        new Date(2020,11,31),
+        new Date(2021,0,1),
+        new Date(2021,0,4),
+        new Date(2021,0,18),
+        new Date(2021,1,15),
+        new Date(2021,2,15),
+        new Date(2021,2,16),
+        new Date(2021,2,17),
+        new Date(2021,2,18),
+        new Date(2021,2,19),
+        new Date(2021,2,22),
+        new Date(2021,3,2),
+        new Date(2021,3,12),    //Not really a holiday, but causes the A/B date to jump
+    ];
+    const bellTimes = [['MS','8:10-9:40','9:44-11:14','11:14-11:44','11:48-1:51','1:55-3:25'],
+                       ['HS','8:40-10:10','10:15-11:45','12:55-2:25','2:30-4:00']];
+
+</script>
+
+<div id='content'>
+    <table class="bordered">
+        <tr><td></td><td>Henry Middle School<br>Bell Schedule<br></td><td></td></tr>
+        <tr class="header"><td>A Day</td><td>Time</td><td>B Day</td></tr>
+        <tr><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td></tr>
+        <tr><td rowspan="3">Lunch</td></tr>
+        <tr><td></td><td></td><td></td></tr>
+    </table>
+</div>
+
+
+<script>
+
+    /* 0 = A Day */
+    /* 1 = B Day */
+    function getAorBDay( /* Date */ targetDate) {
+        const firstADay = new Date(2020,7,13);
+        console.log(holidays.filter(function(d) { return d <= targetDate }));
+        const holidayOffset = holidays.filter(function(d) { return d <= targetDate }).length;
+        const weeks = Math.floor(Math.round((targetDate - firstADay)/(1000 * 3600 * 24))/7);
+        console.log(`should remove ${weeks} weeks`);
+
+        const dayOfSchool = Math.round((targetDate - firstADay)/(1000 * 3600 * 24)) - (weeks*2) + holidayOffset;
+        console.log(`Day of School: ${dayOfSchool}`);
+        return(dayOfSchool % 2);
+    }
+
+    function storeSchedule(s) {
+        console.log("Storing " + s);
+        if(s === null) {
+            console.error("storeSchedule called with null schedule!");
+            return false;
+        } else {
+            if (typeof (Storage) !== "undefined") {
+                // Code for localStorage/sessionStorage.
+                window.localStorage.setItem('HMSStoredSchedule', JSON.stringify(s));
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function retrieveSchedule() {
+            if (typeof (Storage) !== "undefined") {
+                // Code for localStorage/sessionStorage.
+                return JSON.parse(window.localStorage.getItem('HMSStoredSchedule'));
+            } else {
+                return null;
+            }
+    }
+
+    function validateCBData() {
+        let submitBtn = document.getElementById('setupSubmit');
+        if(document.querySelectorAll(".advisementcb:checked").length !== 1) {
+            if (submitBtn.disabled === false) {
+                console.log("Disabling submit, too many advisement periods.");
+                submitBtn.disabled = true;
+            }
+        } else {
+            console.log("Enabling submit.");
+            submitBtn.disabled = false;
+        }
+    }
+    function saveSchedule(e) {
+        console.log("Submitted");
+        //console.log(e);
+        const selectedLevel = document.getElementById('school-level');
+        let schedule = {
+            schoolName: document.getElementById('school-name').value,
+            schoolLevel: selectedLevel[selectedLevel.selectedIndex].value,
+            period1: document.getElementById('period1').value,
+            period2: document.getElementById('period2').value,
+            period3: document.getElementById('period3').value,
+            period4: document.getElementById('period4').value,
+            period5: document.getElementById('period5').value,
+            period6: document.getElementById('period6').value,
+            period7: document.getElementById('period7').value,
+            period8: document.getElementById('period8').value,
+            advisementPeriod: document.querySelector('.advisementcb:checked').id,
+        }
+        console.log(JSON.stringify(schedule));
+        if(storeSchedule(schedule)) {
+          draw();
+        } else {
+            e.preventDefault();
+            return false;
+        }
+    }
+
+    function getSchedule(target) {
+        const currSchedule = retrieveSchedule();
+        function generatePeriodForm() {
+            let returnString = "";
+            for(let i = 1; i < 9; ++i) {
+                returnString +=
+                    `Period ${i} class: <input type='textbox' id='period${i}' size='32' value='${currSchedule.period1}'> <input class='advisementcb' type='checkbox' id='${i}' onchange='validateCBData()'> <br>`;
+            }
+            return returnString;
+        }
+        target.innerHTML =
+            "Enter your classes below. Click the checkmark next to the class that is marked as <i>advisement/Lunch</i>"+
+            "<form id='scheduleForm'>" +
+            "School Name: " + "<input type='text' id='school-name'><br>" +
+            "School level: " + "<select id='school-level'><option value='MS'>Middle School</option><option value='HS'>High School</option></select><br>" +
+            generatePeriodForm() +
+            "Period 1 class: " + "<input type='textbox' id='period1' size='32' value='" + currSchedule.period1 + "'> <input class='advisementcb' type='checkbox' id='1' onchange='validateCBData()'> <br>" +
+            "Period 2 class: " + "<input type='textbox' id='period2' size='32'> <input class='advisementcb' type='checkbox' id='2' onchange='validateCBData()'> <br>" +
+            "Period 3 class: " + "<input type='textbox' id='period3' size='32'> <input class='advisementcb' type='checkbox' id='3' onchange='validateCBData()'> <br>" +
+            "Period 4 class: " + "<input type='textbox' id='period4' size='32'> <input class='advisementcb' type='checkbox' id='4' onchange='validateCBData()'> <br>" +
+            "Period 5 class: " + "<input type='textbox' id='period5' size='32'> <input class='advisementcb' type='checkbox' id='4' onchange='validateCBData()'> <br>" +
+            "Period 6 class: " + "<input type='textbox' id='period6' size='32'> <input class='advisementcb' type='checkbox' id='5' onchange='validateCBData()'> <br>" +
+            "Period 7 class: " + "<input type='textbox' id='period7' size='32'> <input class='advisementcb' type='checkbox' id='6' onchange='validateCBData()'> <br>" +
+            "Period 8 class: " + "<input type='textbox' id='period8' size='32'> <input class='advisementcb' type='checkbox' id='7' onchange='validateCBData()'> <br>" +
+            "<input id='setupSubmit' type='submit' value='Save'>" +
+            "</form><br>" +
+            "<div id='setupError'></div>";
+        document.getElementById('scheduleForm').addEventListener('submit',saveSchedule);
+
+    }
+
+    function displaySchedule(target) {
+        let schedule = retrieveSchedule();
+        console.log(schedule);
+        if(schedule === null) {
+            alert("Couldn't retrieve schedule!");
+            getSchedule(target);
+        } else {
+            const now = new Date(Date.now());
+            const bellIndex = bellTimes.findIndex(function(r) { return r[0] === schedule.schoolLevel})
+            const aOrB = getAorBDay(new Date(now.getFullYear(),now.getMonth(),now.getDate()));
+            const dayMsg = "Today is a" + ((aOrB == 0) ? "n" : "");
+            target.innerHTML = "<div id='bell-schedule'><table class='bordered'>" +
+                "    <tr class='header'><td></td><td><div id='school-name'>" + schedule.schoolName + "</div>Bell Schedule</td><td></td></tr>" +
+                "    <tr class='header'><td>A Day</td><td>Time</td><td>B Day</td></tr>\n" +
+                "    <tr><td>" + schedule.period1 + "</td><td>" + bellTimes[bellIndex][1] + "</td><td>" + schedule.period5 + "</td></tr>" +
+                "    <tr><td>" + schedule.period2 + "</td><td>" + bellTimes[bellIndex][2] + "</td><td>" + schedule.period6 + "</td></tr>" +
+                "    <tr><td>" + schedule.period3 + "</td><td>" + bellTimes[bellIndex][3] + "</td><td>" + schedule.period7 + "</td></tr>" +
+                "    <tr><td>" + schedule.period4 + "</td><td>" + bellTimes[bellIndex][4] + "</td><td>" + schedule.period8 + "</td></tr>" +
+                "</table></div>" +
+                "<div class='right-column'><div class='a-b-day'>" + dayMsg + "<div id='a-b-day'>" +(aOrB == 0 ? "A" : "B") + "</div> day.</div></div>";
+        }
+    }
+
+    function draw() {
+        //console.log(document.holidays);
+        //This is super simplistic. It's not designed to be an enterprise-quality app, just get things done.
+        if (typeof (Storage) !== "undefined") {
+            // Code for localStorage/sessionStorage.
+            let existingSchedule = JSON.parse(window.localStorage.getItem("HMSStoredSchedule"));
+            if (existingSchedule == null) {
+                //getSchedule();
+                //alert("No schedule found.");
+                getSchedule(document.getElementById("content"));
+            } else {
+                displaySchedule(document.getElementById("content"));
+            }
+        } else {
+            alert("For this app to work properly, we need to store data locally.");
+        }
+    }
+
+    draw();
+</script>
+</body>
+</html>
